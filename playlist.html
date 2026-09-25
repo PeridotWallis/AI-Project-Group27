@@ -127,6 +127,13 @@
       background: #101b19;
     }
 
+    .player-frame.spotify-frame {
+      min-height: 352px;
+      aspect-ratio: auto;
+    }
+
+    .spotify-player { width: 100%; min-height: 352px; }
+
     .empty-player {
       max-width: 300px;
       padding: 24px;
@@ -547,6 +554,108 @@
     const playlistList = document.querySelector("#playlist-list");
     const queueCount = document.querySelector("#queue-count");
     const statusMessage = document.querySelector("#status-message");
+    let youtubeApiPromise;
+    let spotifyApiPromise;
+    let spotifyAPI;
+    let activeYouTubePlayer;
+    let activeSpotifyController;
+    let playerGeneration = 0;
+    let autoPlayNextTrack = false;
+
+    function loadYouTubeAPI() {
+      if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+      if (youtubeApiPromise) return youtubeApiPromise;
+      youtubeApiPromise = new Promise((resolve, reject) => {
+        const previousReady = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = () => {
+          if (typeof previousReady === "function") previousReady();
+          resolve(window.YT);
+        };
+        const script = document.createElement("script");
+        script.src = "https://www.youtube.com/iframe_api";
+        script.onerror = () => reject(new Error("YouTube player API failed to load"));
+        document.head.append(script);
+      });
+      return youtubeApiPromise;
+    }
+
+    function loadSpotifyAPI() {
+      if (spotifyAPI) return Promise.resolve(spotifyAPI);
+      if (spotifyApiPromise) return spotifyApiPromise;
+      spotifyApiPromise = new Promise((resolve, reject) => {
+        const previousReady = window.onSpotifyIframeApiReady;
+        window.onSpotifyIframeApiReady = api => {
+          if (typeof previousReady === "function") previousReady(api);
+          spotifyAPI = api;
+          resolve(api);
+        };
+        const script = document.createElement("script");
+        script.src = "https://open.spotify.com/embed/iframe-api/v1";
+        script.async = true;
+        script.onerror = () => reject(new Error("Spotify player API failed to load"));
+        document.head.append(script);
+      });
+      return spotifyApiPromise;
+    }
+
+    function advanceAfterCompletion(playlistIndex, trackIndex, generation) {
+      if (generation !== playerGeneration || state.activePlaylistIndex !== playlistIndex || state.activeTrackIndex !== trackIndex) return;
+      const playlist = currentPlaylist();
+      if (trackIndex >= playlist.songs.length - 1) return;
+      autoPlayNextTrack = true;
+      state.activeTrackIndex = trackIndex + 1;
+      saveState();
+      render();
+    }
+
+    function clearActivePlayers() {
+      playerGeneration += 1;
+      if (activeYouTubePlayer) activeYouTubePlayer.destroy();
+      if (activeSpotifyController) activeSpotifyController.destroy();
+      activeYouTubePlayer = null;
+      activeSpotifyController = null;
+      playerFrame.classList.remove("spotify-frame");
+      return playerGeneration;
+    }
+
+    function setupYouTubeCompletion(iframe, playlistIndex, trackIndex, generation) {
+      loadYouTubeAPI().then(api => {
+        if (generation !== playerGeneration || !iframe.isConnected) return;
+        activeYouTubePlayer = new api.Player(iframe, {
+          events: {
+            onStateChange(event) {
+              if (event.data === api.PlayerState.ENDED) {
+                advanceAfterCompletion(playlistIndex, trackIndex, generation);
+              }
+            }
+          }
+        });
+      }).catch(() => {});
+    }
+
+    function setupSpotifyCompletion(host, spotifyUri, playlistIndex, trackIndex, generation, shouldAutoplay) {
+      loadSpotifyAPI().then(api => {
+        if (generation !== playerGeneration || !host.isConnected) return;
+        api.createController(host, { uri: spotifyUri, width: "100%", height: 352 }, controller => {
+          if (generation !== playerGeneration) {
+            controller.destroy();
+            return;
+          }
+          activeSpotifyController = controller;
+          let playbackStarted = false;
+          controller.addListener("playback_started", () => {
+            playbackStarted = true;
+          });
+          controller.addListener("playback_update", event => {
+            const playback = event.data;
+            if (playbackStarted && playback.isPaused && playback.duration > 0 && playback.position >= playback.duration - 1000) {
+              advanceAfterCompletion(playlistIndex, trackIndex, generation);
+            }
+          });
+          if (shouldAutoplay) controller.play();
+        });
+      }).catch(() => {});
+    }
 
     function currentPlaylist() {
       return state.playlists[state.activePlaylistIndex];
@@ -583,11 +692,11 @@
         const path = url.pathname.split("/").filter(Boolean);
         const playlistId = url.searchParams.get("list");
         if ((path[0] === "playlist" || path[0] === "embed" && path[1] === "videoseries") && playlistId) {
-          return { service: "YouTube", src: `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(playlistId)}&autoplay=1` };
+          return { service: "YouTube", src: `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(playlistId)}&autoplay=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}` };
         }
         const videoId = host === "youtu.be" ? path[0] : url.searchParams.get("v") || (path[0] === "embed" || path[0] === "shorts" || path[0] === "live" ? path[1] : null);
         if (!videoId) return { service: "YouTube", external: true };
-        return { service: "YouTube", src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1` };
+        return { service: "YouTube", src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}` };
       }
 
       if (host === "open.spotify.com" || host === "www.spotify.com") {
@@ -644,6 +753,11 @@
       const playlist = currentPlaylist();
       const song = playlist.songs[state.activeTrackIndex];
       const link = song && songLink(song);
+      const shouldAutoplay = autoPlayNextTrack;
+      autoPlayNextTrack = false;
+      const generation = clearActivePlayers();
+      const playlistIndex = state.activePlaylistIndex;
+      const trackIndex = state.activeTrackIndex;
       const previousButton = document.querySelector("#previous-button");
       const nextButton = document.querySelector("#next-button");
       previousButton.disabled = !link || state.activeTrackIndex <= 0;
@@ -667,15 +781,24 @@
       const filePageYouTube = embed.service === "YouTube" && window.location.protocol === "file:";
 
       if (embed.src && !filePageYouTube) {
-        const iframe = document.createElement("iframe");
-        iframe.src = embed.src;
-        iframe.title = `${embed.service} player`;
-        iframe.allow = "autoplay; encrypted-media; picture-in-picture; clipboard-write";
-        iframe.referrerPolicy = "origin";
-        iframe.allowFullscreen = true;
-        iframe.loading = "eager";
-        if (embed.service === "Spotify") iframe.style.height = "352px";
-        playerFrame.append(iframe);
+        if (embed.service === "Spotify") {
+          playerFrame.classList.add("spotify-frame");
+          const host = document.createElement("div");
+          host.className = "spotify-player";
+          playerFrame.append(host);
+          const embedPath = new URL(embed.src).pathname.split("/");
+          setupSpotifyCompletion(host, `spotify:${embedPath[2]}:${embedPath[3]}`, playlistIndex, trackIndex, generation, shouldAutoplay);
+        } else {
+          const iframe = document.createElement("iframe");
+          iframe.src = embed.src;
+          iframe.title = `${embed.service} player`;
+          iframe.allow = "autoplay; encrypted-media; picture-in-picture; clipboard-write";
+          iframe.referrerPolicy = "origin";
+          iframe.allowFullscreen = true;
+          iframe.loading = "eager";
+          playerFrame.append(iframe);
+          if (embed.service === "YouTube") setupYouTubeCompletion(iframe, playlistIndex, trackIndex, generation);
+        }
       } else {
         const message = document.createElement("div");
         message.className = "empty-player";
