@@ -2,11 +2,20 @@
 
 Jukebox lets you make playlists from YouTube, Spotify, and Bandcamp links. An internet connection is needed to play music. Playlists are saved on this device in the app.
 
+Installer links below download files attached to the latest GitHub release. If a link says the file is unavailable, the release has not been published yet. After these changes are pushed to GitHub, a maintainer can publish the first release with:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+GitHub Actions then builds the Mac and Windows installers and attaches them to the release. The files will appear on the repository's **Releases** page when the workflow finishes.
+
 ## Install on Mac
 
 1. Download the disk image for your Mac:
-   - **Apple silicon:** `Jukebox-1.0.0-arm64.dmg`
-   - **Intel:** `Jukebox-1.0.0.dmg`
+  - **Apple silicon:** [Download Jukebox for Apple silicon](https://github.com/PeridotWallis/AI-Project-Group27/releases/latest/download/Jukebox-1.0.0-arm64.dmg)
+  - **Intel:** [Download Jukebox for Intel](https://github.com/PeridotWallis/AI-Project-Group27/releases/latest/download/Jukebox-1.0.0.dmg)
 2. Open the downloaded `.dmg` file.
 3. Drag **Jukebox** into the **Applications** folder shown in the window.
 4. Eject the Jukebox disk image, then open Jukebox from Applications.
@@ -15,7 +24,7 @@ The app is not signed or notarized yet. If macOS blocks the first launch, Contro
 
 ## Install on Windows
 
-1. Download `Jukebox Setup 1.0.0.exe`.
+1. [Download the Windows installer](https://github.com/PeridotWallis/AI-Project-Group27/releases/latest/download/Jukebox%20Setup%201.0.0.exe).
 2. Open the installer and follow the instructions.
 3. Start Jukebox from the Start menu.
 
