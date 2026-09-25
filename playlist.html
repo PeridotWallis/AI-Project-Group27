@@ -652,7 +652,11 @@
               advanceAfterCompletion(playlistIndex, trackIndex, generation);
             }
           });
-          if (shouldAutoplay) controller.play();
+          if (shouldAutoplay) {
+            controller.addListener("ready", () => {
+              if (generation === playerGeneration) controller.play();
+            });
+          }
         });
       }).catch(() => {});
     }
