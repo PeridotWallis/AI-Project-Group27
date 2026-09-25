@@ -11,6 +11,8 @@ git push origin v1.0.0
 
 GitHub Actions then builds the Mac and Windows installers and attaches them to the release. The files will appear on the repository's **Releases** page when the workflow finishes.
 
+If the release page still shows only source-code archives, open the repository's **Actions** tab, select **Build and publish desktop installers**, choose **Run workflow**, and enter `v1.0.0` as the tag. Wait for the workflow to finish successfully; the installer files are attached only after the build jobs succeed.
+
 ## Install on Mac
 
 1. Download the disk image for your Mac:
