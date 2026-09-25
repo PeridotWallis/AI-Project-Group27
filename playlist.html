@@ -258,7 +258,7 @@
     .track-row {
       min-height: 64px;
       display: grid;
-      grid-template-columns: 32px minmax(0, 1fr) 34px;
+      grid-template-columns: 32px minmax(0, 1fr) 34px 34px;
       align-items: center;
       gap: 8px;
       border-bottom: 1px solid var(--line);
@@ -299,6 +299,19 @@
     }
 
     .remove-track:hover { background: #fbe2dc; color: #a83d2c; }
+
+    .rename-track {
+      width: 32px;
+      height: 32px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .rename-track:hover { background: var(--lime); color: var(--ink); }
 
     .empty-queue {
       padding: 18px 0;
@@ -508,7 +521,12 @@
         if (!saved || !Array.isArray(saved.playlists)) return initialState;
         const playlists = saved.playlists
           .filter(playlist => playlist && typeof playlist.name === "string" && Array.isArray(playlist.songs))
-          .map(playlist => ({ name: playlist.name.slice(0, 40) || "Untitled mix", songs: playlist.songs.filter(song => typeof song === "string") }));
+          .map(playlist => ({
+            name: playlist.name.slice(0, 40) || "Untitled mix",
+            songs: playlist.songs
+              .filter(song => typeof song === "string" || song && typeof song.url === "string")
+              .map(song => typeof song === "string" ? { url: song, name: "" } : { url: song.url, name: typeof song.name === "string" ? song.name.slice(0, 100) : "" })
+          }));
         if (playlists.length === 0) return initialState;
         return {
           playlists,
@@ -606,6 +624,16 @@
       return label.replace(/[-_]/g, " ").slice(0, 70);
     }
 
+    function songLink(song) {
+      return typeof song === "string" ? song : song.url;
+    }
+
+    function songName(song, service) {
+      return typeof song === "string" || !song.name.trim()
+        ? readableSongName(songLink(song), service)
+        : song.name;
+    }
+
     function setStatus(message, isError = false) {
       statusMessage.textContent = message;
       statusMessage.dataset.error = String(isError);
@@ -613,7 +641,8 @@
 
     function renderPlayer() {
       const playlist = currentPlaylist();
-      const link = playlist.songs[state.activeTrackIndex];
+      const song = playlist.songs[state.activeTrackIndex];
+      const link = song && songLink(song);
       const previousButton = document.querySelector("#previous-button");
       const nextButton = document.querySelector("#next-button");
       previousButton.disabled = !link || state.activeTrackIndex <= 0;
@@ -631,7 +660,7 @@
       }
 
       const embed = embedFor(link);
-      title.textContent = readableSongName(link, embed.service);
+      title.textContent = songName(song, embed.service);
       serviceLabel.textContent = `${embed.service} · ${state.activeTrackIndex + 1} of ${playlist.songs.length}`;
 
       if (embed.src) {
@@ -678,8 +707,10 @@
         return;
       }
 
-      playlist.songs.forEach((link, index) => {
+      playlist.songs.forEach((song, index) => {
+        const link = songLink(song);
         const service = serviceFor(link) || "Music";
+        const name = songName(song, service);
         const row = document.createElement("li");
         row.className = "track-row";
         row.setAttribute("aria-current", String(index === state.activeTrackIndex));
@@ -689,22 +720,41 @@
         const select = document.createElement("button");
         select.className = "track-select";
         select.type = "button";
-        select.setAttribute("aria-label", `Play ${readableSongName(link, service)} from ${service}`);
-        const name = document.createElement("strong");
-        name.textContent = readableSongName(link, service);
+        select.setAttribute("aria-label", `Play ${name} from ${service}`);
+        const nameLabel = document.createElement("strong");
+        nameLabel.textContent = name;
         const source = document.createElement("span");
         source.textContent = service;
-        select.append(name, source);
+        select.append(nameLabel, source);
         select.addEventListener("click", () => {
           state.activeTrackIndex = index;
           saveState();
           render();
         });
+        const rename = document.createElement("button");
+        rename.className = "rename-track";
+        rename.type = "button";
+        rename.textContent = "✎";
+        rename.title = `Rename ${name}`;
+        rename.setAttribute("aria-label", `Rename ${name}`);
+        rename.addEventListener("click", () => {
+          const updatedName = window.prompt("Name this song", name);
+          if (updatedName === null) return;
+          const trimmedName = updatedName.trim();
+          if (!trimmedName) {
+            setStatus("Song names cannot be empty.", true);
+            return;
+          }
+          playlist.songs[index] = { url: link, name: trimmedName.slice(0, 100) };
+          saveState();
+          render();
+          setStatus("Song name updated.");
+        });
         const remove = document.createElement("button");
         remove.className = "remove-track";
         remove.type = "button";
         remove.textContent = "×";
-        remove.setAttribute("aria-label", `Remove ${readableSongName(link, service)}`);
+        remove.setAttribute("aria-label", `Remove ${name}`);
         remove.addEventListener("click", () => {
           playlist.songs.splice(index, 1);
           if (playlist.songs.length === 0) state.activeTrackIndex = -1;
@@ -713,7 +763,7 @@
           saveState();
           render();
         });
-        row.append(number, select, remove);
+        row.append(number, select, rename, remove);
         trackList.append(row);
       });
     }
@@ -773,7 +823,7 @@
         return;
       }
       const playlist = currentPlaylist();
-      playlist.songs.push(link);
+      playlist.songs.push({ url: link, name: readableSongName(link, service) });
       if (state.activeTrackIndex < 0) state.activeTrackIndex = playlist.songs.length - 1;
       saveState();
       render();
