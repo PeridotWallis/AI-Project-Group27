@@ -2,6 +2,39 @@
 
 Jukebox is a static HTML app. You do not need Node.js, npm, or external packages. You do need Python 3 to serve it over localhost so embedded YouTube players receive a valid page origin.
 
+## Desktop apps with Electron
+
+The Electron version uses the same `playlist.html` interface and stores its playlists in the desktop app's local browser storage. It runs the page on a fixed localhost address so YouTube embeds receive a valid web origin.
+
+1. Install Node.js LTS, which includes npm.
+2. In Terminal, change to the project folder and install the desktop dependencies:
+
+	```sh
+	npm install
+	```
+
+3. Start the desktop app during development:
+
+	```sh
+	npm start
+	```
+
+4. Build macOS app and disk image distributions for Apple Silicon and Intel on a Mac:
+
+	```sh
+	npm run dist:mac
+	```
+
+5. Build the Windows x64 installer (works on this Mac when Wine is installed, or on Windows):
+
+	```sh
+	npm run dist:win
+	```
+
+Build outputs are written to `release/`. The macOS command creates `.dmg` and `.zip` distributions for both architectures; the Windows command creates an x64 setup `.exe`. Unsigned builds can show operating-system security warnings. For public distribution, sign and notarize the macOS app and sign the Windows installer.
+
+The browser version and Electron app use separate browser storage, so their playlists are not automatically shared. The desktop app reserves localhost port 41783; close any other service using that port if Jukebox cannot start.
+
 ## macOS: use the launcher
 
 1. Make sure Python 3 is installed. In Terminal, `python3 --version` should print a version.

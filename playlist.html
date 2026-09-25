@@ -418,8 +418,36 @@
       cursor: pointer;
     }
 
+    .rename-playlist {
+      width: 30px;
+      height: 34px;
+      border: 0;
+      border-left: 1px solid var(--line);
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
     .playlist-item[aria-current="true"] .delete-playlist { border-left-color: #ffffff50; }
+    .playlist-item[aria-current="true"] .rename-playlist { border-left-color: #ffffff50; }
+    .rename-playlist:hover { background: var(--lime); color: var(--ink); }
     .delete-playlist:hover { color: var(--coral); }
+
+    .rename-dialog {
+      width: min(420px, calc(100vw - 32px));
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      background: var(--paper);
+    }
+
+    .rename-dialog::backdrop { background: #10252180; }
+    .rename-dialog h2 { margin: 0 0 16px; font: 500 1.5rem Georgia, "Times New Roman", serif; }
+    .rename-dialog label { display: block; margin-bottom: 7px; font-size: 0.82rem; font-weight: 700; }
+    .rename-dialog input { width: 100%; }
+    .rename-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    .secondary-button { min-height: 42px; padding: 0 14px; border: 1px solid var(--line); border-radius: 5px; background: var(--white); cursor: pointer; }
 
     button:focus-visible, a:focus-visible, input:focus-visible {
       outline: 3px solid #45833d;
@@ -514,6 +542,18 @@
     </footer>
   </div>
 
+  <dialog class="rename-dialog" id="rename-dialog" aria-labelledby="rename-dialog-title">
+    <form id="rename-form">
+      <h2 id="rename-dialog-title">Rename item</h2>
+      <label for="rename-input" id="rename-input-label">Name</label>
+      <input id="rename-input" type="text" maxlength="100" required>
+      <div class="rename-dialog-actions">
+        <button class="secondary-button" type="button" id="cancel-rename">Cancel</button>
+        <button class="primary-button" type="submit">Save name</button>
+      </div>
+    </form>
+  </dialog>
+
   <script>
     const STORAGE_KEY = "jukebox-playlists-v1";
     const allowedSpotifyTypes = new Set(["track", "album", "playlist", "episode", "show", "artist"]);
@@ -554,6 +594,11 @@
     const playlistList = document.querySelector("#playlist-list");
     const queueCount = document.querySelector("#queue-count");
     const statusMessage = document.querySelector("#status-message");
+    const renameDialog = document.querySelector("#rename-dialog");
+    const renameInput = document.querySelector("#rename-input");
+    const renameDialogTitle = document.querySelector("#rename-dialog-title");
+    const renameInputLabel = document.querySelector("#rename-input-label");
+    let renameTarget = null;
     let youtubeApiPromise;
     let spotifyApiPromise;
     let spotifyAPI;
@@ -870,17 +915,13 @@
         rename.title = `Rename ${name}`;
         rename.setAttribute("aria-label", `Rename ${name}`);
         rename.addEventListener("click", () => {
-          const updatedName = window.prompt("Name this song", name);
-          if (updatedName === null) return;
-          const trimmedName = updatedName.trim();
-          if (!trimmedName) {
-            setStatus("Song names cannot be empty.", true);
-            return;
-          }
-          playlist.songs[index] = { url: link, name: trimmedName.slice(0, 100) };
-          saveState();
-          render();
-          setStatus("Song name updated.");
+          renameTarget = { type: "song", playlistIndex: state.activePlaylistIndex, itemIndex: index };
+          renameDialogTitle.textContent = "Rename song";
+          renameInputLabel.textContent = "Song name";
+          renameInput.maxLength = 100;
+          renameInput.value = name;
+          renameDialog.showModal();
+          renameInput.focus();
         });
         const remove = document.createElement("button");
         remove.className = "remove-track";
@@ -920,6 +961,21 @@
           saveState();
           render();
         });
+        const rename = document.createElement("button");
+        rename.type = "button";
+        rename.className = "rename-playlist";
+        rename.textContent = "✎";
+        rename.title = `Rename ${playlist.name}`;
+        rename.setAttribute("aria-label", `Rename playlist ${playlist.name}`);
+        rename.addEventListener("click", () => {
+          renameTarget = { type: "playlist", playlistIndex: index };
+          renameDialogTitle.textContent = "Rename playlist";
+          renameInputLabel.textContent = "Playlist name";
+          renameInput.maxLength = 40;
+          renameInput.value = playlist.name;
+          renameDialog.showModal();
+          renameInput.focus();
+        });
         const remove = document.createElement("button");
         remove.type = "button";
         remove.className = "delete-playlist";
@@ -934,10 +990,44 @@
           saveState();
           render();
         });
-        item.append(select, remove);
+        item.append(select, rename, remove);
         playlistList.append(item);
       });
     }
+
+    document.querySelector("#rename-form").addEventListener("submit", event => {
+      event.preventDefault();
+      if (!renameTarget) return;
+      const updatedName = renameInput.value.trim();
+      if (!updatedName) return;
+
+      if (renameTarget.type === "playlist") {
+        const playlist = state.playlists[renameTarget.playlistIndex];
+        if (!playlist) return;
+        playlist.name = updatedName.slice(0, 40);
+      } else {
+        const playlist = state.playlists[renameTarget.playlistIndex];
+        const song = playlist && playlist.songs[renameTarget.itemIndex];
+        if (!song) return;
+        playlist.songs[renameTarget.itemIndex] = { url: songLink(song), name: updatedName.slice(0, 100) };
+      }
+
+      const renamedType = renameTarget.type;
+      renameDialog.close();
+      renameTarget = null;
+      saveState();
+      render();
+      setStatus(renamedType === "playlist" ? "Playlist name updated." : "Song name updated.");
+    });
+
+    document.querySelector("#cancel-rename").addEventListener("click", () => {
+      renameDialog.close();
+      renameTarget = null;
+    });
+
+    renameDialog.addEventListener("close", () => {
+      renameTarget = null;
+    });
 
     function render() {
       renderPlayer();

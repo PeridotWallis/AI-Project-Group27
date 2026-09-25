@@ -1,0 +1,49 @@
+{
+  "name": "jukebox-playlist",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A cross-platform desktop wrapper for the Jukebox universal playlist.",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist:mac": "electron-builder --mac dmg zip --x64 --arm64",
+    "dist:win": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.jukebox.playlist",
+    "productName": "Jukebox",
+    "files": [
+      "playlist.html",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "directories": {
+      "output": "release"
+    }
+  },
+  "allowScripts": {
+    "electron@37.10.3": true,
+    "electron-winstaller@5.4.0": true
+  }
+}
