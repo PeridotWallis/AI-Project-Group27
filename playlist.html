@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f8ef">
+  <title>Jukebox | Universal Playlist</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
+      color: #173531;
+      background: #f5f8ef;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      --ink: #173531;
+      --muted: #687970;
+      --line: #d9e2d4;
+      --paper: #f5f8ef;
+      --white: #fff;
+      --lime: #d9f47a;
+      --coral: #ff715b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+
+    .app {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .topbar {
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 14px clamp(20px, 5vw, 72px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--lime);
+      font-family: "Avenir Next", Avenir, sans-serif;
+      font-size: 1rem;
+    }
+
+    .top-note, .eyebrow, .service-label, .track-index {
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .top-note { margin: 0; }
+
+    .workspace {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 34px clamp(20px, 5vw, 72px) 36px;
+      display: grid;
+      align-content: center;
+      grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.8fr);
+      gap: 32px;
+    }
+
+    .player-section { min-width: 0; }
+
+    .eyebrow { margin: 0 0 10px; }
+
+    .now-playing-title {
+      min-height: 52px;
+      margin: 0 0 18px;
+      overflow-wrap: anywhere;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 500;
+      line-height: 1.08;
+    }
+
+    .player-frame {
+      width: 100%;
+      min-height: 240px;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #e6eee0;
+    }
+
+    .player-frame iframe {
+      width: 100%;
+      height: 100%;
+      min-height: 240px;
+      border: 0;
+      background: #101b19;
+    }
+
+    .empty-player {
+      max-width: 300px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .equalizer {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      margin-bottom: 16px;
+    }
+
+    .equalizer span {
+      width: 5px;
+      height: var(--bar-height);
+      border-radius: 5px;
+      background: var(--ink);
+      opacity: 0.72;
+    }
+
+    .empty-player p { margin: 0; color: var(--muted); line-height: 1.5; }
+
+    .player-actions {
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .transport { display: flex; align-items: center; gap: 8px; }
+
+    .icon-button {
+      width: 38px;
+      height: 38px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .icon-button:hover:not(:disabled) { background: var(--lime); border-color: var(--lime); }
+    .icon-button:disabled { opacity: 0.42; cursor: not-allowed; }
+
+    .service-label { text-align: right; }
+
+    .link-form { margin-top: 22px; }
+
+    .link-form label {
+      display: block;
+      margin-bottom: 9px;
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    .link-row { display: flex; gap: 8px; }
+
+    .link-row input, .new-playlist-form input {
+      min-width: 0;
+      height: 46px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      outline: none;
+      background: var(--white);
+      color: var(--ink);
+    }
+
+    .link-row input { flex: 1; }
+    .link-row input:focus, .new-playlist-form input:focus { border-color: var(--ink); box-shadow: 0 0 0 2px #17353120; }
+
+    .primary-button {
+      min-height: 46px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 5px;
+      background: var(--ink);
+      color: var(--white);
+      font-size: 0.86rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .primary-button:hover { background: #28564d; }
+
+    .status-message {
+      min-height: 20px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    .status-message[data-error="true"] { color: #a83d2c; }
+
+    .queue-section { min-width: 0; padding-top: 1px; }
+
+    .queue-heading {
+      min-height: 52px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .queue-heading h2 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.35rem;
+      font-weight: 500;
+    }
+
+    .queue-count { color: var(--muted); font-size: 0.78rem; }
+
+    .track-list {
+      max-height: 450px;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      list-style: none;
+      border-top: 1px solid var(--line);
+    }
+
+    .track-row {
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr) 34px;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .track-index { text-align: center; }
+
+    .track-select {
+      min-width: 0;
+      padding: 10px 0;
+      overflow: hidden;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .track-select strong, .track-select span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .track-select strong { font-size: 0.88rem; font-weight: 650; }
+    .track-select span { margin-top: 4px; color: var(--muted); font-size: 0.72rem; }
+    .track-row[aria-current="true"] .track-select strong { color: #376b32; }
+
+    .remove-track {
+      width: 32px;
+      height: 32px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .remove-track:hover { background: #fbe2dc; color: #a83d2c; }
+
+    .empty-queue {
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.5;
+    }
+
+    .playlist-dock {
+      min-height: 112px;
+      padding: 16px clamp(20px, 5vw, 72px) 18px;
+      border-top: 1px solid var(--line);
+      background: #edf3e5;
+    }
+
+    .dock-inner { width: min(1120px, 100%); margin: 0 auto; }
+
+    .dock-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .dock-heading h2 {
+      margin: 0;
+      font-size: 0.76rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .new-playlist-form { display: flex; gap: 6px; }
+
+    .new-playlist-form input {
+      width: 154px;
+      height: 36px;
+      padding: 0 10px;
+      font-size: 0.8rem;
+    }
+
+    .new-playlist-form button {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 5px;
+      background: var(--lime);
+      font-size: 1.25rem;
+      cursor: pointer;
+    }
+
+    .playlist-list {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 1px 1px 4px;
+      scrollbar-width: thin;
+    }
+
+    .playlist-item {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--white);
+    }
+
+    .playlist-item[aria-current="true"] { border-color: var(--ink); background: var(--ink); color: var(--white); }
+
+    .playlist-select {
+      min-height: 40px;
+      max-width: 220px;
+      padding: 0 12px;
+      overflow: hidden;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .playlist-select span { margin-left: 8px; opacity: 0.7; font-size: 0.75rem; }
+
+    .delete-playlist {
+      width: 30px;
+      height: 34px;
+      border: 0;
+      border-left: 1px solid var(--line);
+      border-radius: 0 4px 4px 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .playlist-item[aria-current="true"] .delete-playlist { border-left-color: #ffffff50; }
+    .delete-playlist:hover { color: var(--coral); }
+
+    button:focus-visible, a:focus-visible, input:focus-visible {
+      outline: 3px solid #45833d;
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 760px) {
+      .topbar { min-height: 64px; }
+      .top-note { display: none; }
+      .workspace {
+        align-content: start;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 26px;
+        padding-top: 26px;
+      }
+      .now-playing-title { min-height: 0; }
+      .player-frame, .player-frame iframe { min-height: 200px; }
+      .queue-section { padding-top: 0; }
+      .queue-heading { min-height: 0; margin-bottom: 10px; }
+      .track-list { max-height: 250px; }
+    }
+
+    @media (max-width: 480px) {
+      .link-row { align-items: stretch; }
+      .link-row input { width: 0; padding: 0 10px; font-size: 0.8rem; }
+      .link-row .primary-button { padding: 0 12px; }
+      .playlist-dock { padding-right: 14px; padding-left: 14px; }
+      .new-playlist-form input { width: 128px; }
+      .player-frame, .player-frame iframe { min-height: 190px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">♪</span>Jukebox</div>
+      <p class="top-note">A little room for every kind of music</p>
+    </header>
+
+    <main class="workspace">
+      <section class="player-section" aria-labelledby="now-playing-title">
+        <p class="eyebrow">Now playing</p>
+        <h1 class="now-playing-title" id="now-playing-title">Choose a song</h1>
+        <div class="player-frame" id="player-frame" aria-live="polite">
+          <div class="empty-player">
+            <div class="equalizer" aria-hidden="true"><span style="--bar-height: 14px"></span><span style="--bar-height: 28px"></span><span style="--bar-height: 20px"></span><span style="--bar-height: 34px"></span><span style="--bar-height: 17px"></span><span style="--bar-height: 26px"></span><span style="--bar-height: 12px"></span></div>
+            <p>Add a share link to start your first mix.</p>
+          </div>
+        </div>
+        <div class="player-actions">
+          <div class="transport" aria-label="Playlist playback controls">
+            <button class="icon-button" id="previous-button" type="button" aria-label="Play previous song" title="Previous" disabled>←</button>
+            <button class="icon-button" id="next-button" type="button" aria-label="Play next song" title="Next" disabled>→</button>
+          </div>
+          <span class="service-label" id="service-label">No song selected</span>
+        </div>
+
+        <form class="link-form" id="link-form">
+          <label for="song-link">Add a song from YouTube, Spotify, or Bandcamp</label>
+          <div class="link-row">
+            <input id="song-link" name="song-link" type="url" placeholder="Paste a music share link" required autocomplete="url">
+            <button class="primary-button" type="submit">Add song</button>
+          </div>
+          <p class="status-message" id="status-message" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <aside class="queue-section" aria-labelledby="queue-title">
+        <div class="queue-heading">
+          <h2 id="queue-title">Up next</h2>
+          <span class="queue-count" id="queue-count">0 songs</span>
+        </div>
+        <ol class="track-list" id="track-list"></ol>
+      </aside>
+    </main>
+
+    <footer class="playlist-dock">
+      <div class="dock-inner">
+        <div class="dock-heading">
+          <h2>Your playlists</h2>
+          <form class="new-playlist-form" id="new-playlist-form" aria-label="Create a playlist">
+            <input id="playlist-name" type="text" maxlength="40" placeholder="New playlist" aria-label="New playlist name">
+            <button type="submit" aria-label="Create playlist" title="Create playlist">+</button>
+          </form>
+        </div>
+        <nav class="playlist-list" id="playlist-list" aria-label="Available playlists"></nav>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "jukebox-playlists-v1";
+    const allowedSpotifyTypes = new Set(["track", "album", "playlist", "episode", "show", "artist"]);
+    const initialState = {
+      activePlaylistIndex: 0,
+      activeTrackIndex: -1,
+      playlists: [{ name: "First mix", songs: [] }]
+    };
+
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (!saved || !Array.isArray(saved.playlists)) return initialState;
+        const playlists = saved.playlists
+          .filter(playlist => playlist && typeof playlist.name === "string" && Array.isArray(playlist.songs))
+          .map(playlist => ({ name: playlist.name.slice(0, 40) || "Untitled mix", songs: playlist.songs.filter(song => typeof song === "string") }));
+        if (playlists.length === 0) return initialState;
+        return {
+          playlists,
+          activePlaylistIndex: Math.min(Math.max(Number(saved.activePlaylistIndex) || 0, 0), playlists.length - 1),
+          activeTrackIndex: Number.isInteger(saved.activeTrackIndex) ? saved.activeTrackIndex : -1
+        };
+      } catch {
+        return initialState;
+      }
+    }
+
+    const state = loadState();
+    const playerFrame = document.querySelector("#player-frame");
+    const title = document.querySelector("#now-playing-title");
+    const serviceLabel = document.querySelector("#service-label");
+    const trackList = document.querySelector("#track-list");
+    const playlistList = document.querySelector("#playlist-list");
+    const queueCount = document.querySelector("#queue-count");
+    const statusMessage = document.querySelector("#status-message");
+
+    function currentPlaylist() {
+      return state.playlists[state.activePlaylistIndex];
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {
+        setStatus("Your browser could not save this playlist on this device.", true);
+      }
+    }
+
+    function serviceFor(link) {
+      let url;
+      try {
+        url = new URL(link);
+      } catch {
+        return null;
+      }
+      if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+      const host = url.hostname.toLowerCase();
+      if (host === "youtu.be" || host === "youtube.com" || host.endsWith(".youtube.com")) return "YouTube";
+      if (host === "open.spotify.com" || host === "www.spotify.com" || host === "spotify.link") return "Spotify";
+      if (host === "bandcamp.com" || host.endsWith(".bandcamp.com")) return "Bandcamp";
+      return null;
+    }
+
+    function embedFor(link) {
+      const url = new URL(link);
+      const host = url.hostname.toLowerCase();
+
+      if (host === "youtu.be" || host === "youtube.com" || host.endsWith(".youtube.com")) {
+        const path = url.pathname.split("/").filter(Boolean);
+        const playlistId = url.searchParams.get("list");
+        if ((path[0] === "playlist" || path[0] === "embed" && path[1] === "videoseries") && playlistId) {
+          return { service: "YouTube", src: `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(playlistId)}&autoplay=1` };
+        }
+        const videoId = host === "youtu.be" ? path[0] : url.searchParams.get("v") || (path[0] === "embed" || path[0] === "shorts" || path[0] === "live" ? path[1] : null);
+        if (!videoId) return { service: "YouTube", external: true };
+        return { service: "YouTube", src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1` };
+      }
+
+      if (host === "open.spotify.com" || host === "www.spotify.com") {
+        const path = url.pathname.split("/").filter(Boolean);
+        if (host === "open.spotify.com" && path[0] === "embed" && allowedSpotifyTypes.has(path[1])) {
+          return { service: "Spotify", src: `https://open.spotify.com/${path.join("/")}` };
+        }
+        const typeIndex = path.findIndex(segment => allowedSpotifyTypes.has(segment));
+        if (typeIndex !== -1 && path[typeIndex + 1]) {
+          return { service: "Spotify", src: `https://open.spotify.com/embed/${path[typeIndex]}/${encodeURIComponent(path[typeIndex + 1])}?utm_source=generator` };
+        }
+        return { service: "Spotify", external: true };
+      }
+
+      if (host === "spotify.link") return { service: "Spotify", external: true };
+
+      if (host === "bandcamp.com" || host.endsWith(".bandcamp.com")) {
+        if (/\/embeddedplayer\//i.test(url.pathname)) return { service: "Bandcamp", src: url.href };
+        return { service: "Bandcamp", external: true };
+      }
+
+      return { service: "Music service", external: true };
+    }
+
+    function readableSongName(link, service) {
+      const url = new URL(link);
+      const pieces = url.pathname.split("/").filter(Boolean);
+      if (service === "Bandcamp" && /\/embeddedplayer\//i.test(url.pathname)) {
+        const bandcampItem = pieces.find(piece => /^(track|album)=\d+$/i.test(piece));
+        if (bandcampItem) return bandcampItem.replace("=", " ");
+      }
+      let label = pieces.at(-1) || service;
+      if (label.toLowerCase() === "embeddedplayer") label = pieces.at(-2) || service;
+      try { label = decodeURIComponent(label); } catch { /* Keep the URL segment as-is. */ }
+      return label.replace(/[-_]/g, " ").slice(0, 70);
+    }
+
+    function setStatus(message, isError = false) {
+      statusMessage.textContent = message;
+      statusMessage.dataset.error = String(isError);
+    }
+
+    function renderPlayer() {
+      const playlist = currentPlaylist();
+      const link = playlist.songs[state.activeTrackIndex];
+      const previousButton = document.querySelector("#previous-button");
+      const nextButton = document.querySelector("#next-button");
+      previousButton.disabled = !link || state.activeTrackIndex <= 0;
+      nextButton.disabled = !link || state.activeTrackIndex >= playlist.songs.length - 1;
+      playerFrame.replaceChildren();
+
+      if (!link) {
+        title.textContent = "Choose a song";
+        serviceLabel.textContent = "No song selected";
+        const empty = document.createElement("div");
+        empty.className = "empty-player";
+        empty.innerHTML = '<div class="equalizer" aria-hidden="true"><span style="--bar-height:14px"></span><span style="--bar-height:28px"></span><span style="--bar-height:20px"></span><span style="--bar-height:34px"></span><span style="--bar-height:17px"></span><span style="--bar-height:26px"></span><span style="--bar-height:12px"></span></div><p>Add a share link to start your first mix.</p>';
+        playerFrame.append(empty);
+        return;
+      }
+
+      const embed = embedFor(link);
+      title.textContent = readableSongName(link, embed.service);
+      serviceLabel.textContent = `${embed.service} · ${state.activeTrackIndex + 1} of ${playlist.songs.length}`;
+
+      if (embed.src) {
+        const iframe = document.createElement("iframe");
+        iframe.src = embed.src;
+        iframe.title = `${embed.service} player`;
+        iframe.allow = "autoplay; encrypted-media; picture-in-picture; clipboard-write";
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        iframe.allowFullscreen = true;
+        iframe.loading = "eager";
+        if (embed.service === "Spotify") iframe.style.height = "352px";
+        playerFrame.append(iframe);
+      } else {
+        const message = document.createElement("div");
+        message.className = "empty-player";
+        const copy = document.createElement("p");
+        copy.textContent = embed.service === "Bandcamp"
+          ? "Bandcamp share links open on Bandcamp. Paste a Bandcamp embed link to play it right here."
+          : "This link opens on its music service.";
+        const openLink = document.createElement("a");
+        openLink.className = "primary-button";
+        openLink.href = link;
+        openLink.target = "_blank";
+        openLink.rel = "noopener noreferrer";
+        openLink.textContent = `Open on ${embed.service}`;
+        openLink.style.display = "inline-flex";
+        openLink.style.alignItems = "center";
+        openLink.style.marginTop = "14px";
+        message.append(copy, openLink);
+        playerFrame.append(message);
+      }
+    }
+
+    function renderTracks() {
+      const playlist = currentPlaylist();
+      trackList.replaceChildren();
+      queueCount.textContent = `${playlist.songs.length} ${playlist.songs.length === 1 ? "song" : "songs"}`;
+
+      if (playlist.songs.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "empty-queue";
+        empty.textContent = "Your mix is waiting for its first song.";
+        trackList.append(empty);
+        return;
+      }
+
+      playlist.songs.forEach((link, index) => {
+        const service = serviceFor(link) || "Music";
+        const row = document.createElement("li");
+        row.className = "track-row";
+        row.setAttribute("aria-current", String(index === state.activeTrackIndex));
+        const number = document.createElement("span");
+        number.className = "track-index";
+        number.textContent = String(index + 1).padStart(2, "0");
+        const select = document.createElement("button");
+        select.className = "track-select";
+        select.type = "button";
+        select.setAttribute("aria-label", `Play ${readableSongName(link, service)} from ${service}`);
+        const name = document.createElement("strong");
+        name.textContent = readableSongName(link, service);
+        const source = document.createElement("span");
+        source.textContent = service;
+        select.append(name, source);
+        select.addEventListener("click", () => {
+          state.activeTrackIndex = index;
+          saveState();
+          render();
+        });
+        const remove = document.createElement("button");
+        remove.className = "remove-track";
+        remove.type = "button";
+        remove.textContent = "×";
+        remove.setAttribute("aria-label", `Remove ${readableSongName(link, service)}`);
+        remove.addEventListener("click", () => {
+          playlist.songs.splice(index, 1);
+          if (playlist.songs.length === 0) state.activeTrackIndex = -1;
+          else if (index < state.activeTrackIndex) state.activeTrackIndex -= 1;
+          else if (state.activeTrackIndex >= playlist.songs.length) state.activeTrackIndex = playlist.songs.length - 1;
+          saveState();
+          render();
+        });
+        row.append(number, select, remove);
+        trackList.append(row);
+      });
+    }
+
+    function renderPlaylists() {
+      playlistList.replaceChildren();
+      state.playlists.forEach((playlist, index) => {
+        const item = document.createElement("div");
+        item.className = "playlist-item";
+        item.setAttribute("aria-current", String(index === state.activePlaylistIndex));
+        const select = document.createElement("button");
+        select.type = "button";
+        select.className = "playlist-select";
+        select.textContent = playlist.name;
+        const count = document.createElement("span");
+        count.textContent = String(playlist.songs.length);
+        select.append(count);
+        select.setAttribute("aria-label", `${playlist.name}, ${playlist.songs.length} ${playlist.songs.length === 1 ? "song" : "songs"}`);
+        select.addEventListener("click", () => {
+          state.activePlaylistIndex = index;
+          state.activeTrackIndex = playlist.songs.length ? 0 : -1;
+          saveState();
+          render();
+        });
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "delete-playlist";
+        remove.textContent = "×";
+        remove.title = `Delete ${playlist.name}`;
+        remove.setAttribute("aria-label", `Delete playlist ${playlist.name}`);
+        remove.addEventListener("click", () => {
+          state.playlists.splice(index, 1);
+          if (state.playlists.length === 0) state.playlists.push({ name: "First mix", songs: [] });
+          state.activePlaylistIndex = Math.min(state.activePlaylistIndex, state.playlists.length - 1);
+          state.activeTrackIndex = state.playlists[state.activePlaylistIndex].songs.length ? 0 : -1;
+          saveState();
+          render();
+        });
+        item.append(select, remove);
+        playlistList.append(item);
+      });
+    }
+
+    function render() {
+      renderPlayer();
+      renderTracks();
+      renderPlaylists();
+    }
+
+    document.querySelector("#link-form").addEventListener("submit", event => {
+      event.preventDefault();
+      const input = document.querySelector("#song-link");
+      const link = input.value.trim();
+      const service = serviceFor(link);
+      if (!service) {
+        setStatus("Use a valid YouTube, Spotify, or Bandcamp share link.", true);
+        return;
+      }
+      const playlist = currentPlaylist();
+      playlist.songs.push(link);
+      if (state.activeTrackIndex < 0) state.activeTrackIndex = playlist.songs.length - 1;
+      saveState();
+      render();
+      input.value = "";
+      setStatus(`Added to ${playlist.name}.`);
+    });
+
+    document.querySelector("#new-playlist-form").addEventListener("submit", event => {
+      event.preventDefault();
+      const input = document.querySelector("#playlist-name");
+      const name = input.value.trim() || `Mix ${state.playlists.length + 1}`;
+      state.playlists.push({ name: name.slice(0, 40), songs: [] });
+      state.activePlaylistIndex = state.playlists.length - 1;
+      state.activeTrackIndex = -1;
+      input.value = "";
+      saveState();
+      render();
+      setStatus(`Created ${name}.`);
+    });
+
+    document.querySelector("#previous-button").addEventListener("click", () => {
+      if (state.activeTrackIndex > 0) state.activeTrackIndex -= 1;
+      saveState();
+      render();
+    });
+
+    document.querySelector("#next-button").addEventListener("click", () => {
+      if (state.activeTrackIndex < currentPlaylist().songs.length - 1) state.activeTrackIndex += 1;
+      saveState();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
