@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello World</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Comic Sans MS", "Comic Sans", cursive;
+      background: hsl(190 65% 96%);
+      color: #172a35;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      transition: background-color 350ms ease;
+    }
+
+    main {
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 28px;
+      font-size: clamp(3rem, 10vw, 6rem);
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    button {
+      min-height: 48px;
+      padding: 0 22px;
+      border: 0;
+      border-radius: 6px;
+      background: #173f4a;
+      color: #fff;
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 160ms ease, transform 160ms ease;
+    }
+
+    button:hover {
+      background: #245a65;
+      transform: translateY(-2px);
+    }
+
+    button:focus-visible {
+      outline: 3px solid #172a35;
+      outline-offset: 4px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Hello World</h1>
+    <button id="color-button" type="button">Change background</button>
+  </main>
+
+  <script>
+    const colorButton = document.querySelector("#color-button");
+
+    colorButton.addEventListener("click", () => {
+      if (Math.random() < 0.3) {
+        document.body.style.backgroundImage = "linear-gradient(135deg, #27d42a, #f935ee, #a05302)";
+        return;
+      }
+
+      const hue = Math.floor(Math.random() * 360);
+      document.body.style.backgroundImage = "none";
+      document.body.style.backgroundColor = `hsl(${hue} 65% 92%)`;
+    });
+  </script>
+</body>
+</html>
