@@ -10,8 +10,10 @@ Jukebox is a static HTML app. You do not need Node.js, npm, or external packages
 
 If Finder says you do not have permission to execute the command file, open Terminal and run:
 
+Replace `<your-macOS-username>` with your Mac account name. Update the project folder path too if you saved it somewhere else.
+
 ```sh
-cd "/Users/vaughnwallis/AI-Project-Group27"
+cd "/Users/<your-macOS-username>/AI-Project-Group27"
 /bin/sh "Start Jukebox.command"
 ```
 
@@ -22,7 +24,7 @@ Running the script through `/bin/sh` avoids Finder's executable-permission handl
 If the launcher does not work, open Terminal, move to the project folder, and start Python's built-in server:
 
 ```sh
-cd "/Users/vaughnwallis/AI-Project-Group27"
+cd "/Users/<your-macOS-username>/AI-Project-Group27"
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
