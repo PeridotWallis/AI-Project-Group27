@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="origin">
   <meta name="theme-color" content="#f5f8ef">
   <title>Jukebox | Universal Playlist</title>
   <style>
@@ -663,12 +664,14 @@
       title.textContent = songName(song, embed.service);
       serviceLabel.textContent = `${embed.service} · ${state.activeTrackIndex + 1} of ${playlist.songs.length}`;
 
-      if (embed.src) {
+      const filePageYouTube = embed.service === "YouTube" && window.location.protocol === "file:";
+
+      if (embed.src && !filePageYouTube) {
         const iframe = document.createElement("iframe");
         iframe.src = embed.src;
         iframe.title = `${embed.service} player`;
         iframe.allow = "autoplay; encrypted-media; picture-in-picture; clipboard-write";
-        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        iframe.referrerPolicy = "origin";
         iframe.allowFullscreen = true;
         iframe.loading = "eager";
         if (embed.service === "Spotify") iframe.style.height = "352px";
@@ -677,9 +680,11 @@
         const message = document.createElement("div");
         message.className = "empty-player";
         const copy = document.createElement("p");
-        copy.textContent = embed.service === "Bandcamp"
-          ? "Bandcamp share links open on Bandcamp. Paste a Bandcamp embed link to play it right here."
-          : "This link opens on its music service.";
+        copy.textContent = filePageYouTube
+          ? "YouTube embeds need this page to be served over HTTP or HTTPS. Opening the app as a file hides the referrer YouTube requires (Error 153). Start a local web server and open this page through localhost."
+          : embed.service === "Bandcamp"
+            ? "Bandcamp share links open on Bandcamp. Paste a Bandcamp embed link to play it right here."
+            : "This link opens on its music service.";
         const openLink = document.createElement("a");
         openLink.className = "primary-button";
         openLink.href = link;
